@@ -1,5 +1,5 @@
 {
-  "version": "1.1.6",
+  "version": "1.1.7",
   "updated": "2026-09-20",
-  "notes": "Splash screen startup fix and stale cache cleanup"
+  "notes": "Startup cache, splash failsafe and adaptive full-size icon fix"
 }
