@@ -82,8 +82,11 @@ jobs:
           }
           EOF
 
+          echo 'android.useAndroidX=true' > android-app/gradle.properties
+
           cat > android-app/app/build.gradle <<EOF
           plugins { id 'com.android.application' }
+          dependencies { implementation 'androidx.core:core:1.13.1' }
 
           android {
               namespace 'com.virendra.calculator'
@@ -167,11 +170,20 @@ jobs:
           </adaptive-icon>
           EOF
 
+          cat > android-app/app/src/main/res/xml/camera_paths.xml <<'EOF'
+          <paths xmlns:android="http://schemas.android.com/apk/res/android">
+            <cache-path name="scanner_photos" path="scanner/"/>
+          </paths>
+          EOF
+
           cat > android-app/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET"/>
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
             <application android:allowBackup="true" android:usesCleartextTraffic="false" android:theme="@style/Theme.VirendraCalculator" android:label="Virendra Calculator" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round">
+              <provider android:name="androidx.core.content.FileProvider" android:authorities="com.virendra.calculator.camera" android:exported="false" android:grantUriPermissions="true">
+                <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/camera_paths"/>
+              </provider>
               <activity android:name=".MainActivity" android:screenOrientation="unspecified" android:configChanges="orientation|screenSize|keyboardHidden" android:exported="true">
                 <intent-filter>
                   <action android:name="android.intent.action.MAIN"/>
@@ -196,11 +208,15 @@ jobs:
           import android.webkit.*;
           import android.widget.Toast;
           import java.io.OutputStream;
+          import java.io.File;
+          import androidx.core.content.FileProvider;
 
           public class MainActivity extends Activity {
               private WebView webView;
               private ValueCallback<Uri[]> filePathCallback;
               private static final int FILE_CHOOSER = 1001;
+              private Uri cameraOutputUri;
+              private File cameraOutputFile;
 
               @Override public void onCreate(Bundle b) {
                   super.onCreate(b);
@@ -230,14 +246,29 @@ jobs:
                       @Override public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb, FileChooserParams p) {
                           if (filePathCallback != null) filePathCallback.onReceiveValue(null);
                           filePathCallback = cb;
+                          clearCameraCapture(true);
                           try {
-                              Intent i = p.createIntent();
-                              startActivityForResult(i, FILE_CHOOSER);
+                              if (p.isCaptureEnabled()) {
+                                  File folder = new File(getCacheDir(), "scanner");
+                                  if (!folder.isDirectory() && !folder.mkdirs()) throw new java.io.IOException("Camera folder");
+                                  cameraOutputFile = File.createTempFile("scan_", ".jpg", folder);
+                                  cameraOutputUri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".camera", cameraOutputFile);
+                                  Intent camera = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                                  camera.putExtra(MediaStore.EXTRA_OUTPUT, cameraOutputUri);
+                                  camera.setClipData(ClipData.newRawUri("Scanner photo", cameraOutputUri));
+                                  camera.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                                  startActivityForResult(camera, FILE_CHOOSER);
+                              } else {
+                                  startActivityForResult(p.createIntent(), FILE_CHOOSER);
+                              }
                               return true;
                           } catch (Exception e) {
+                              clearCameraCapture(true);
+                              ValueCallback<Uri[]> pending = filePathCallback;
                               filePathCallback = null;
-                              Toast.makeText(MainActivity.this, "File picker नहीं खुला", Toast.LENGTH_SHORT).show();
-                              return false;
+                              if (pending != null) pending.onReceiveValue(null);
+                              Toast.makeText(MainActivity.this, p.isCaptureEnabled() ? "Camera नहीं खुला. फोन का Camera app जाँचें." : "File picker नहीं खुला", Toast.LENGTH_LONG).show();
+                              return true;
                           }
                       }
                   });
@@ -262,10 +293,34 @@ jobs:
               @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
                   super.onActivityResult(requestCode, resultCode, data);
                   if (requestCode == FILE_CHOOSER && filePathCallback != null) {
-                      Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
-                      filePathCallback.onReceiveValue(results);
+                      Uri[] results = null;
+                      if (cameraOutputUri != null) {
+                          if (resultCode == RESULT_OK && cameraOutputFile != null && cameraOutputFile.length() > 0) {
+                              results = new Uri[]{cameraOutputUri};
+                          }
+                          clearCameraCapture(results == null);
+                      } else {
+                          results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                      }
+                      ValueCallback<Uri[]> pending = filePathCallback;
+                      filePathCallback = null;
+                      pending.onReceiveValue(results);
+                  }
+              }
+
+              private void clearCameraCapture(boolean deleteFile) {
+                  if (deleteFile && cameraOutputFile != null) cameraOutputFile.delete();
+                  cameraOutputFile = null;
+                  cameraOutputUri = null;
+              }
+
+              @Override protected void onDestroy() {
+                  if (filePathCallback != null) {
+                      filePathCallback.onReceiveValue(null);
                       filePathCallback = null;
                   }
+                  clearCameraCapture(true);
+                  super.onDestroy();
               }
 
               @Override public void onBackPressed() {
@@ -322,3 +377,4 @@ jobs:
           path: ${{ env.APK_NAME }}
           if-no-files-found: error
           retention-days: 90
+
