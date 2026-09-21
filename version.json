@@ -1,5 +1,5 @@
 {
-  "version": "1.1.7",
-  "updated": "2026-09-20",
-  "notes": "Startup cache, splash failsafe and adaptive full-size icon fix"
+  "version": "1.1.9",
+  "updated": "2026-09-21",
+  "notes": "Fix calculator input updates: remove obsolete Concrete initialization that stopped calculator event handlers."
 }

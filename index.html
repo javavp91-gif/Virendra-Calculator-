@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="en"><head>
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#173453">
@@ -786,8 +787,8 @@ body.tool-open .vc-dev-footer{display:none}
 #vcAppSplash{animation:vcSplashFailsafe .01s linear 3.5s forwards}
 </style>
 </head>
-<body class="">
-
+<body>
+<div id="vcAppSplash" aria-label="Welcome to Virendra Calculator"></div>
 <script>
 (function(){
   var s=document.getElementById('vcAppSplash');
@@ -837,7 +838,7 @@ body.tool-open .vc-dev-footer{display:none}
 <h2>Soil / Aggregate Quantity</h2>
 <div class="row"><label>Length</label><div class="unitrow"><input id="ml" type="number" step="any"><select id="mlu" class="unit"><option>m</option><option>mm</option></select></div></div>
 <div class="row"><label>Width</label><div class="unitrow"><input id="mw" type="number" step="any"><select id="mwu" class="unit"><option>m</option><option>mm</option></select></div></div>
-<div class="row"><label>Thickness</label><div class="unitrow"><input id="mt" type="number" step="any"><select id="mtu" class="unit"><option selected="">mm</option><option>m</option></select></div></div>
+<div class="row"><label>Thickness</label><div class="unitrow"><input id="mt" type="number" step="any"><select id="mtu" class="unit"><option selected>mm</option><option>m</option></select></div></div>
 <div class="row"><label>Density</label><input id="md" type="number" step="any" placeholder="t/m³"></div>
 <div class="result"><div class="rtitle">Estimated Material Required</div><div class="answer" id="mtot">—</div><div id="mvol" style="margin-top:8px">Volume: —</div></div>
 <button class="pdfBtn" onclick="downloadCalculatorPDF('material')">DOWNLOAD PDF</button>
@@ -930,7 +931,7 @@ body.tool-open .vc-dev-footer{display:none}
 <div class="row">
 <label>Convert To</label>
 <div class="unitrow">
-  <input id="unitResultValue" type="text" readonly="" value="1">
+  <input id="unitResultValue" type="text" readonly value="1">
   <select id="unitTo" class="unitSelect"></select>
 </div>
 </div>
@@ -1057,7 +1058,7 @@ Temperature: °C, °F, Kelvin.
   </div>
   <div class="ps-colorTitle">Background Colour</div>
   <div class="ps-colors">
-    <label class="ps-color"><input type="radio" name="psPhotoBg" value="#ffffff" checked=""><div class="ps-swatch" style="background:#ffffff"></div>White</label>
+    <label class="ps-color"><input type="radio" name="psPhotoBg" value="#ffffff" checked><div class="ps-swatch" style="background:#ffffff"></div>White</label>
     <label class="ps-color"><input type="radio" name="psPhotoBg" value="#dceeff"><div class="ps-swatch" style="background:#dceeff"></div>Light Blue</label>
     <label class="ps-color"><input type="radio" name="psPhotoBg" value="#e5f6e8"><div class="ps-swatch" style="background:#e5f6e8"></div>Light Green</label>
     <label class="ps-color"><input type="radio" name="psPhotoBg" value="#eef2f7"><div class="ps-swatch" style="background:#eef2f7"></div>Light Gray</label>
@@ -1122,7 +1123,7 @@ Temperature: °C, °F, Kelvin.
   </div>
   <div class="ps-colorTitle">Background Colour</div>
   <div class="ps-colors">
-    <label class="ps-color"><input type="radio" name="psBothBg" value="#ffffff" checked=""><div class="ps-swatch" style="background:#ffffff"></div>White</label>
+    <label class="ps-color"><input type="radio" name="psBothBg" value="#ffffff" checked><div class="ps-swatch" style="background:#ffffff"></div>White</label>
     <label class="ps-color"><input type="radio" name="psBothBg" value="#dceeff"><div class="ps-swatch" style="background:#dceeff"></div>Light Blue</label>
     <label class="ps-color"><input type="radio" name="psBothBg" value="#e5f6e8"><div class="ps-swatch" style="background:#e5f6e8"></div>Light Green</label>
     <label class="ps-color"><input type="radio" name="psBothBg" value="#eef2f7"><div class="ps-swatch" style="background:#eef2f7"></div>Light Gray</label>
@@ -1157,7 +1158,7 @@ Temperature: °C, °F, Kelvin.
 
 <div class="tr-box" style="margin-top:20px">
 <label><span id="targetLabel">हिंदी Translation</span><span class="tr-badge">RESULT</span></label>
-<textarea id="translatedText" readonly="" placeholder="अनुवाद यहाँ दिखाई देगा..."></textarea>
+<textarea id="translatedText" readonly placeholder="अनुवाद यहाँ दिखाई देगा..."></textarea>
 </div>
 
 <div class="tr-actions">
@@ -1193,7 +1194,7 @@ Temperature: °C, °F, Kelvin.
     <label id="pegSameOffsetLabel">Same Offsets</label>
     <input id="pegSameOffset" type="text" inputmode="decimal" value="2, 4, 6" placeholder="2, 4, 6">
   </div>
-  <div class="peg-toggle"><input id="pegSameOffsetToggle" type="checkbox" checked=""><label for="pegSameOffsetToggle" style="margin:0">Same Offsets for all chainages</label></div>
+  <div class="peg-toggle"><input id="pegSameOffsetToggle" type="checkbox" checked><label for="pegSameOffsetToggle" style="margin:0">Same Offsets for all chainages</label></div>
   <div class="peg-help" style="margin-top:10px"><b>Offsets:</b> हमेशा multiple हैं। ऐसे डालें: <b>2, 4, 6</b>. Same Offsets बंद करने पर हर chainage में अलग offset list डाल सकते हैं।</div>
   <div class="peg-actions" style="grid-template-columns:1fr">
     <button class="peg-btn gray" onclick="pegClearValues()">CLEAR VALUES</button>
@@ -1307,7 +1308,7 @@ Temperature: °C, °F, Kelvin.
   <div class="tool-safe">PDF आपके device/browser में process होगी. File server पर upload नहीं होगी.</div>
   <div class="tool-box">
     <label>Select PDF File(s)</label>
-    <input id="pdeFiles" type="file" accept="application/pdf" multiple="">
+    <input id="pdeFiles" type="file" accept="application/pdf" multiple>
     <button id="pdeLoadBtn" class="tool-btn" onclick="pdeLoad()">LOAD PDF PAGES</button>
     <div id="pdeStatus" class="tool-status"></div>
     <div id="pdePages" class="pde-pages"></div>
@@ -1329,21 +1330,21 @@ Temperature: °C, °F, Kelvin.
       <button id="pdeOcrBtn" class="tool-btn" onclick="pdeOcrDetectWords()">OCR DETECT ALL WORDS (SCANNED PDF)</button>
       <div id="pdeSelectedInfo" class="tool-status">Text पर tap करें</div>
       <label>Selected / Old Text</label>
-      <input id="pdeOldText" type="text" readonly="">
+      <input id="pdeOldText" type="text" readonly>
       <label style="margin-top:8px">Replace With</label>
       <textarea id="pdeNewText" placeholder="नया text लिखें"></textarea>
       <div class="pde-auto-settings">
       <div class="pde-grid2" style="margin-top:8px">
-        <div><label>Font</label><select id="pdeFontMode"><option value="auto" selected="">Auto Match</option><option value="Arial">Arial / Sans</option><option value="Times New Roman">Times / Serif</option><option value="Courier New">Courier / Mono</option></select></div>
+        <div><label>Font</label><select id="pdeFontMode"><option value="auto" selected>Auto Match</option><option value="Arial">Arial / Sans</option><option value="Times New Roman">Times / Serif</option><option value="Courier New">Courier / Mono</option></select></div>
         <div><label>Font Size</label><input id="pdeFontSize" type="number" min="4" max="120" step="0.5" value="12"></div>
       </div>
       <div class="pde-grid2" style="margin-top:8px">
-        <div><label>Text Style</label><select id="pdeTextStyle"><option value="normal" selected="">Normal</option><option value="bold">Bold</option><option value="italic">Italic</option><option value="bolditalic">Bold Italic</option></select></div>
+        <div><label>Text Style</label><select id="pdeTextStyle"><option value="normal" selected>Normal</option><option value="bold">Bold</option><option value="italic">Italic</option><option value="bolditalic">Bold Italic</option></select></div>
         <div><label>Line Spacing</label><input id="pdeLineSpacing" type="number" min="0.8" max="3" step="0.1" value="1.2"></div>
       </div>
       <div class="pde-grid2" style="margin-top:8px">
         <div><label>Text Color</label><input id="pdeTextColor" type="color" value="#000000"></div>
-        <div><label>Alignment</label><select id="pdeAlign"><option value="auto" selected="">Auto (Number → Right)</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+        <div><label>Alignment</label><select id="pdeAlign"><option value="auto" selected>Auto (Number → Right)</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
       </div>
       <div style="margin-top:8px">
         <label>Cover Background</label>
@@ -1370,7 +1371,7 @@ Temperature: °C, °F, Kelvin.
   <div class="tool-box">
     <label>Optional Watermark (English / Number)</label>
     <input id="pdeWatermark" type="text" maxlength="50" placeholder="Leave blank for no watermark">
-    <button id="pdeSaveBtn" class="tool-btn green" onclick="pdeSave()">CREATE &amp; DOWNLOAD EDITED PDF</button>
+    <button id="pdeSaveBtn" class="tool-btn green" onclick="pdeSave()">CREATE & DOWNLOAD EDITED PDF</button>
     <button class="tool-btn gray" onclick="pdeClear()">CLEAR</button>
   </div>
   <button class="clear" onclick="navBack()">Back</button>
@@ -1386,20 +1387,20 @@ Temperature: °C, °F, Kelvin.
     <label>Take Document Photo</label>
     <input id="dsCamera" type="file" accept="image/*" capture="environment">
     <label style="margin-top:11px">Or Select Images</label>
-    <input id="dsFiles" type="file" accept="image/*" multiple="">
+    <input id="dsFiles" type="file" accept="image/*" multiple>
     <button class="tool-btn" onclick="dsAddSelected()">ADD TO SCANNER</button>
     <div id="dsPages" class="ds-pages"></div>
   </div>
   <div class="tool-box">
     <div class="ds-grid2">
-      <div><label>Scan Mode</label><select id="dsMode" onchange="dsSchedulePreview(20)"><option value="enhance" selected="">Color Enhance</option><option value="gray">Grayscale</option><option value="bw">Black &amp; White</option><option value="original">Original</option></select></div>
-      <div><label>PDF Page</label><select id="dsPageSize"><option value="a4" selected="">A4</option><option value="image">Fit to Image</option></select></div>
+      <div><label>Scan Mode</label><select id="dsMode" onchange="dsSchedulePreview(20)"><option value="enhance" selected>Color Enhance</option><option value="gray">Grayscale</option><option value="bw">Black & White</option><option value="original">Original</option></select></div>
+      <div><label>PDF Page</label><select id="dsPageSize"><option value="a4" selected>A4</option><option value="image">Fit to Image</option></select></div>
     </div>
     <div class="ds-range"><label>Brightness</label><input id="dsBrightness" type="range" min="-40" max="40" step="1" value="6" oninput="dsRangeLabel('dsBrightness','dsBrightnessVal');dsSchedulePreview()"><span id="dsBrightnessVal">6</span></div>
     <div class="ds-range"><label>Contrast</label><input id="dsContrast" type="range" min="70" max="190" step="1" value="128" oninput="dsRangeLabel('dsContrast','dsContrastVal');dsSchedulePreview()"><span id="dsContrastVal">128%</span></div>
     <div class="ds-range"><label>Sharpness</label><input id="dsSharpness" type="range" min="0" max="100" step="1" value="38" oninput="dsRangeLabel('dsSharpness','dsSharpnessVal');dsSchedulePreview()"><span id="dsSharpnessVal">38</span></div>
-    <label class="ds-check"><input id="dsAutoTone" type="checkbox" checked="" onchange="dsSchedulePreview(20)"> Auto Enhance light &amp; paper white</label>
-    <label class="ds-check"><input id="dsAutoCrop" type="checkbox" checked="" onchange="dsSchedulePreview(20)"> Auto Crop document edges (best effort)</label>
+    <label class="ds-check"><input id="dsAutoTone" type="checkbox" checked onchange="dsSchedulePreview(20)"> Auto Enhance light & paper white</label>
+    <label class="ds-check"><input id="dsAutoCrop" type="checkbox" checked onchange="dsSchedulePreview(20)"> Auto Crop document edges (best effort)</label>
     <button id="dsPdfBtn" class="tool-btn green" onclick="dsCreatePdf(false)">DOWNLOAD PDF</button>
     <button id="dsImgBtn" class="tool-btn" onclick="dsDownloadImages()">DOWNLOAD IMAGE</button>
     <div id="dsStatus" class="tool-status"></div>
@@ -1419,15 +1420,15 @@ Temperature: °C, °F, Kelvin.
   <div id="pcImgPanel" class="pc-panel">
     <div class="pc-row">
       <div class="pc-inlineLabel"><label>Select Images</label><span id="pcImageCount" class="pc-count"></span></div>
-      <input id="pcImages" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.bmp" multiple="" onchange="pcPreviewSelectedImages()">
+      <input id="pcImages" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.bmp" multiple onchange="pcPreviewSelectedImages()">
       <div class="pc-fileHint">हर image पर × Remove, Page No., ←/→ order और ↶/↷ rotate रहेगा.</div>
     </div>
     <div class="pc-row">
       <label>Scan / Enhance</label>
       <select id="pcGlobalEnhance" onchange="pcApplyEnhanceAll(this.value)">
-        <option value="enhance" selected="">Color Enhance</option>
+        <option value="enhance" selected>Color Enhance</option>
         <option value="gray">Grayscale</option>
-        <option value="bw">Black &amp; White</option>
+        <option value="bw">Black & White</option>
         <option value="original">Original</option>
       </select>
       <div class="pc-fileHint">Document Scanner जैसा enhance सभी selected images पर एक साथ लागू होगा.</div>
@@ -1445,7 +1446,7 @@ Temperature: °C, °F, Kelvin.
       <input id="pcPdfName" type="text" value="Images_to_PDF" placeholder="Enter PDF name" style="width:100%;border:1.4px solid #cbd5e1;border-radius:11px;background:#f8fafc;padding:11px;color:#173453;font-size:15px">
       <div class="pc-fileHint">Page setting fixed: A4 · Normal margin · Auto orientation</div>
     </div>
-    <button id="pcCreatePdfBtn" class="pc-btn" onclick="pcImagesToPdf()">CREATE &amp; DOWNLOAD PDF</button>
+    <button id="pcCreatePdfBtn" class="pc-btn" onclick="pcImagesToPdf()">CREATE & DOWNLOAD PDF</button>
     <div id="pcImgStatus" class="pc-status"></div>
     <div class="pc-note">PDF हमेशा A4 में बनेगी, normal margin और auto orientation के साथ. Scan/Enhance सभी pages पर लागू होगा.</div>
   </div>
@@ -1458,17 +1459,17 @@ Temperature: °C, °F, Kelvin.
     </div>
     <div id="pcPdfInfo" class="pc-info"></div>
     <div class="pc-grid2">
-      <div><label>Pages</label><select id="pcPageMode" onchange="pcTogglePageRange()"><option value="all" selected="">All Pages</option><option value="selected">Selected Pages</option></select></div>
-      <div><label>Image Format</label><select id="pcImgFormat"><option value="jpeg" selected="">JPG</option><option value="png">PNG</option></select></div>
+      <div><label>Pages</label><select id="pcPageMode" onchange="pcTogglePageRange()"><option value="all" selected>All Pages</option><option value="selected">Selected Pages</option></select></div>
+      <div><label>Image Format</label><select id="pcImgFormat"><option value="jpeg" selected>JPG</option><option value="png">PNG</option></select></div>
     </div>
     <div class="pc-rangeWrap">
       <label>Page Numbers / Range</label>
-      <input id="pcPageRange" type="text" placeholder="Example: 1,3-5,8" disabled="">
+      <input id="pcPageRange" type="text" placeholder="Example: 1,3-5,8" disabled>
       <div class="pc-fileHint">Selected Pages चुनने पर 1,3-5 जैसे page numbers लिखें.</div>
     </div>
     <div class="pc-grid2">
-      <div><label>Quality / Resolution</label><select id="pcScale"><option value="1.25">Normal</option><option value="2" selected="">High</option><option value="3">Very High</option></select></div>
-      <div><label>JPG Quality</label><select id="pcJpegQuality"><option value="0.85">Good</option><option value="0.94" selected="">High</option><option value="0.98">Maximum</option></select></div>
+      <div><label>Quality / Resolution</label><select id="pcScale"><option value="1.25">Normal</option><option value="2" selected>High</option><option value="3">Very High</option></select></div>
+      <div><label>JPG Quality</label><select id="pcJpegQuality"><option value="0.85">Good</option><option value="0.94" selected>High</option><option value="0.98">Maximum</option></select></div>
     </div>
     <button id="pcConvertPdfBtn" class="pc-btn" onclick="pcPdfToImages()">CONVERT PAGE(S) TO IMAGE</button>
     <button id="pcZipBtn" class="pc-btn green hidden" onclick="pcDownloadAllZip()">DOWNLOAD ALL AS ZIP</button>
@@ -1510,7 +1511,7 @@ Temperature: °C, °F, Kelvin.
       <div class="toe-row"><label>Center to edge length (m)</label><input id="toeCenterEdge" type="number" step="any" value="24" oninput="toeRecalc();toeSaveState()"></div>
     </div>
     <div class="toe-grid2">
-      <div class="toe-row"><label>Slope</label><select id="toeSlope" onchange="toeSlopeChange();toeRecalc();toeSaveState()"><option value="1">1 : 1</option><option value="1.5" selected="">1.5 : 1</option><option value="2">2 : 1</option><option value="2.5">2.5 : 1</option><option value="3">3 : 1</option><option value="custom">Custom</option></select></div>
+      <div class="toe-row"><label>Slope</label><select id="toeSlope" onchange="toeSlopeChange();toeRecalc();toeSaveState()"><option value="1">1 : 1</option><option value="1.5" selected>1.5 : 1</option><option value="2">2 : 1</option><option value="2.5">2.5 : 1</option><option value="3">3 : 1</option><option value="custom">Custom</option></select></div>
       <div class="toe-row" id="toeCustomSlopeRow" style="display:none"><label>Custom Slope (H:V)</label><input id="toeCustomSlope" type="number" step="any" value="1.5" oninput="toeRecalc();toeSaveState()"></div>
     </div>
     <div class="toe-row"><label>Input</label><select id="toeInputMode" onchange="toeRecalc();toeSaveState()"><option value="diff">DRL-ARL value</option><option value="levels">DRL and ARL</option></select></div>
@@ -1547,7 +1548,7 @@ Temperature: °C, °F, Kelvin.
       <div class="cv-field">
 <label>Template</label>
 <button type="button" id="cvTemplateToggle" class="cv-template-toggle" onclick="cvToggleTemplates()">
-  <span id="cvTemplateLabel">Classic Resume</span>
+  <span id="cvTemplateLabel">Templates</span>
   <span class="arrow">⌄</span>
 </button>
 <div id="cvTemplatePanel" class="cv-template-panel">
@@ -1585,11 +1586,11 @@ Temperature: °C, °F, Kelvin.
     </div>
   </div>
 
-  <div class="cv-panel"><h3>Work Experience</h3><div id="cvExpRows"><div class="cv-rowcard cv-exp"><button class="cv-remove" onclick="this.parentElement.remove();cvRender();cvSave()">×</button><div class="cv-rowgrid"><div><label>Company / Project</label><input class="ce-company" value="" placeholder="Example:- ABC Infrastructure Pvt. Ltd."></div><div><label>Role</label><input class="ce-role" value="" placeholder="Example:- Survey Supervisor"></div><div><label>From</label><input class="ce-from" value="" placeholder="Example:- 2024"></div><div><label>To</label><input class="ce-to" value="" placeholder="Example:- Present"></div><div class="full"><label>Work Details</label><textarea class="ce-desc" placeholder="Example:- Road survey, level checking, chainage and site supervision"></textarea></div></div></div></div><button class="cv-add" onclick="cvAddExp()">+ Add Experience</button></div>
-  <div class="cv-panel"><h3>Education</h3><div id="cvEduRows"><div class="cv-rowcard cv-edu"><button class="cv-remove" onclick="this.parentElement.remove();cvRender();cvSave()">×</button><div class="cv-rowgrid"><div><label>Qualification</label><input class="cd-course" value="" placeholder="Example:- Diploma in Civil Engineering"></div><div><label>School / Board / Institute</label><input class="cd-school" value="" placeholder="Example:- Bihar School Examination Board"></div><div><label>Year</label><input class="cd-year" value="" placeholder="Example:- 2019"></div><div><label>Result / Percentage</label><input class="cd-result" value="" placeholder="Example:- 72% or First Division"></div></div></div></div><button class="cv-add" onclick="cvAddEdu()">+ Add Education</button></div>
+  <div class="cv-panel"><h3>Work Experience</h3><div id="cvExpRows"></div><button class="cv-add" onclick="cvAddExp()">+ Add Experience</button></div>
+  <div class="cv-panel"><h3>Education</h3><div id="cvEduRows"></div><button class="cv-add" onclick="cvAddEdu()">+ Add Education</button></div>
 
   <div class="cv-panel">
-    <h3>Skills &amp; Extra Details</h3>
+    <h3>Skills & Extra Details</h3>
     <div class="cv-grid">
       <div class="cv-field full"><label>Skills (comma separated)</label><textarea id="cvSkills" placeholder="Example:- Auto Level, Total Station, MS Excel, Road Work..."></textarea></div>
       <div class="cv-field"><label>Languages</label><input id="cvLanguages" placeholder="Example:- Hindi, English"></div>
@@ -1608,7 +1609,7 @@ Temperature: °C, °F, Kelvin.
   </div>
 
   <div class="cv-preview-wrap">
-    <div id="cvSheet" class="cv-sheet" style="transform: scale(-0.0151134); margin-bottom: -1139.97px;"><div class="cv-gen cv-classic"><h1 class="cc-name">YOUR NAME</h1><div class="cc-line"></div><div class="cc-section"><div class="cc-title">Personal Details</div><div class="cc-personal"><div><ul class="cc-list"></ul></div></div></div><div class="cc-section"><div class="cc-title">Experience</div></div></div></div>
+    <div id="cvSheet" class="cv-sheet"></div>
   </div>
   <button class="clear" onclick="navBack()">Back</button>
 </section>
@@ -1620,7 +1621,7 @@ Temperature: °C, °F, Kelvin.
   <nav class="nav">
     <button onclick="show('two')"><span class="toolIcon">📍</span><span class="toolLabel">Offset RL Calculator</span></button>
     <button onclick="show('multiple')"><span class="toolIcon">📊</span><span class="toolLabel">Multiple Offset RL</span></button>
-    <button onclick="show('single')" class=""><span class="toolIcon">📏</span><span class="toolLabel">RL Calculator</span></button>
+    <button onclick="show('single')"><span class="toolIcon">📏</span><span class="toolLabel">RL Calculator</span></button>
     <button onclick="show('pegLevel')"><span class="toolIcon">🛣️</span><span class="toolLabel">Subgrade / GSB Peg Level</span></button>
     <button onclick="show('toeCalc')"><span class="toolIcon">📐</span><span class="toolLabel">Toe Calculator</span></button>
     <button onclick="show('slab')"><span class="toolIcon">🏗️</span><span class="toolLabel">Slab RL Calculator</span></button>
@@ -1667,26 +1668,26 @@ Temperature: °C, °F, Kelvin.
   <button type="button" class="vc-dev-link" onclick="vcDevOpen()">Developer HTML File</button>
 </div>
 
-<div id="vcDevModal" class="vc-dev-modal hidden" aria-hidden="false">
+<div id="vcDevModal" class="vc-dev-modal hidden" aria-hidden="true">
   <div class="vc-dev-box">
-    <div id="vcDevLockedView" class="hidden">
+    <div id="vcDevLockedView">
       <h3 id="vcDevTitle">Developer HTML File</h3>
       <p class="vc-dev-sub" id="vcDevSub">Password डालकर developer file खोलें.</p>
       <div id="vcDevSetFields" class="hidden">
         <div class="vc-dev-field"><label>New Password</label><input id="vcDevNewPass" type="password" autocomplete="new-password" minlength="4" placeholder="कम से कम 4 characters"></div>
         <div class="vc-dev-field"><label>Confirm Password</label><input id="vcDevConfirmPass" type="password" autocomplete="new-password" minlength="4" placeholder="Password दोबारा डालें"></div>
       </div>
-      <div id="vcDevUnlockFields" class="">
+      <div id="vcDevUnlockFields">
         <div class="vc-dev-field"><label>Password</label><input id="vcDevPass" type="password" autocomplete="current-password" placeholder="Developer password"></div>
       </div>
       <div class="vc-dev-actions">
         <button type="button" class="vc-dev-btn secondary" onclick="vcDevClose()">CANCEL</button>
         <button type="button" id="vcDevPrimaryBtn" class="vc-dev-btn" onclick="vcDevPrimary()">OPEN</button>
       </div>
-      <div id="vcDevStatus" class="vc-dev-status" style="color: rgb(45, 106, 79);"></div>
+      <div id="vcDevStatus" class="vc-dev-status"></div>
     </div>
 
-    <div id="vcDevUnlockedView" class="">
+    <div id="vcDevUnlockedView" class="hidden">
       <h3>Developer HTML File</h3>
       <p class="vc-dev-sub">Developer access unlocked.</p>
       <div class="vc-dev-panel">
@@ -1704,8 +1705,8 @@ Temperature: °C, °F, Kelvin.
           </div>
         </div>
       </div>
-      <div id="vcDevUnlockedStatus" class="vc-dev-status" style="color: rgb(45, 106, 79);"></div>
-      <div id="vcDevBackupInfo" class="vc-dev-note">Auto-backup updated ✓ · 21/9/2026, 7:55:45 am</div>
+      <div id="vcDevUnlockedStatus" class="vc-dev-status"></div>
+      <div id="vcDevBackupInfo" class="vc-dev-note">Current HTML की auto-backup हर बार app खुलने पर update होती है.</div>
       <div class="vc-dev-note">यह in-app protection है. Password के बिना app के अंदर से HTML file नहीं खुलेगी.</div>
     </div>
   </div>
@@ -4041,17 +4042,6 @@ function toeInit(){
 
 
 
-function clearConcrete(){
-  ['conL','conW','conT'].forEach(function(id){document.getElementById(id).value=''});
-  document.getElementById('conCount').value='1';document.getElementById('conWaste').value='0';document.getElementById('conMix').value='volume';
-  document.getElementById('conC').value='1';document.getElementById('conS').value='2';document.getElementById('conA').value='4';document.getElementById('conDry').value='1.54';
-  concreteMixChange();
-}
-['conL','conW','conT','conCount','conWaste','conC','conS','conA','conDry'].forEach(function(id){document.getElementById(id).addEventListener('input',concreteCalc)});
-['conLU','conWU','conTU'].forEach(function(id){document.getElementById(id).addEventListener('change',concreteCalc)});
-document.getElementById('conMix').addEventListener('change',concreteMixChange);
-concreteMixChange();
-
 // PDF download for all calculator sections (offline, no external library)
 function calcPdfSafe(v){
   return String(v==null?'':v)
@@ -4665,16 +4655,7 @@ psUpdateAIReadyText();
 vcRouteFromLocation();
 </script>
 <script>
-
-// AppMint standalone build: do not use external service worker.
-try{
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister().catch(function(){})})}).catch(function(){});
-  }
-  ['virendraRemoteLatestHtmlV2','virendraRemoteLatestVersionV2','virendraRemoteLatestHtmlV3','virendraRemoteLatestVersionV3'].forEach(function(k){localStorage.removeItem(k)});
-  ['virendraUpdateBootGuardV2','virendraUpdateLaterVersionV2','virendraUpdateBootGuardV3','virendraUpdateLaterVersionV3'].forEach(function(k){sessionStorage.removeItem(k)});
-}catch(e){}
-
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
 
 /* Special CV Maker */
 var cvPhotoData='';
@@ -4953,71 +4934,121 @@ window.addEventListener('resize',cvScalePreview);if(document.readyState==='loadi
 </script>
 
 
-
-<!-- Virendra Calculator: safe GitHub HTML auto-update (AppMint compatible). -->
+<style>
+#vcUpdateToast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:999999;background:#0b2f55;color:#fff;padding:11px 16px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);font:600 13px/1.35 Arial,sans-serif;max-width:90vw;text-align:center;display:none}
+#vcUpdateToast.show{display:block}
+#vcUpdateModal{position:fixed;inset:0;z-index:1000000;background:rgba(3,19,35,.62);display:flex;align-items:center;justify-content:center;padding:20px;font-family:Arial,sans-serif}
+#vcUpdateModal.hidden{display:none!important}
+.vc-update-card{width:min(92vw,420px);background:#fff;border-radius:22px;padding:22px;box-shadow:0 22px 60px rgba(0,0,0,.3);text-align:center}
+.vc-update-icon{width:62px;height:62px;border-radius:18px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:#e7f4ff;font-size:32px}
+.vc-update-title{font-size:22px;font-weight:800;color:#0b2f55;margin-bottom:7px}
+.vc-update-ver{font-size:13px;font-weight:700;color:#2c6b9c;margin-bottom:10px}
+.vc-update-note{font-size:14px;line-height:1.45;color:#45586b;margin:0 0 18px;white-space:pre-line}
+.vc-update-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vc-update-actions button{border:0;border-radius:12px;padding:12px 10px;font-weight:800;font-size:14px;cursor:pointer}
+#vcUpdateNowBtn{background:#0877d1;color:#fff}
+#vcUpdateLaterBtn{background:#eef3f7;color:#31475c}
+#vcUpdateNowBtn:disabled,#vcUpdateLaterBtn:disabled{opacity:.55}
+.vc-update-progress{font-size:13px;color:#0b6f48;font-weight:700;margin-top:12px;min-height:18px}
+</style>
+<div id="vcUpdateToast"></div>
+<div id="vcUpdateModal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="vcUpdateTitle">
+  <div class="vc-update-card">
+    <div class="vc-update-icon">⬆️</div>
+    <div id="vcUpdateTitle" class="vc-update-title">Update Available</div>
+    <div id="vcUpdateVersionText" class="vc-update-ver"></div>
+    <p id="vcUpdateNotes" class="vc-update-note">Virendra Calculator का नया version उपलब्ध है.</p>
+    <div class="vc-update-actions">
+      <button id="vcUpdateLaterBtn" type="button">LATER</button>
+      <button id="vcUpdateNowBtn" type="button">UPDATE NOW</button>
+    </div>
+    <div id="vcUpdateProgress" class="vc-update-progress"></div>
+  </div>
+</div>
 <script>
 (function(){
-  'use strict';
-  var VC_BUNDLED_VERSION='1.2.0';
+  var VC_APP_VERSION='1.1.9';
   var VC_VERSION_URL='https://raw.githubusercontent.com/javavp91-gif/Virendra-Calculator-/main/version.json';
   var VC_HTML_URL='https://raw.githubusercontent.com/javavp91-gif/Virendra-Calculator-/main/index.html';
-  var K_HTML='virendraRemoteLatestHtmlV4';
-  var K_VER='virendraRemoteLatestVersionV4';
-  var K_ACTIVE='virendraRemoteActiveVersionV4';
+  var VC_CACHE_HTML='virendraRemoteLatestHtmlV3';
+  var VC_CACHE_VERSION='virendraRemoteLatestVersionV3';
+  var VC_SESSION_GUARD='virendraUpdateBootGuardV3';
+  var VC_LATER_SESSION='virendraUpdateLaterVersionV3';
+  var pendingUpdate=null;
 
-  function parts(v){
-    return String(v||'0').trim().replace(/^v/i,'').split('.').map(function(x){
-      var n=parseInt(String(x).replace(/\D.*$/,''),10); return isNaN(n)?0:n;
-    });
+  function byId(id){return document.getElementById(id)}
+  function toast(msg){var e=byId('vcUpdateToast');if(!e)return;e.textContent=msg;e.classList.add('show')}
+  function unt(){var e=byId('vcUpdateToast');if(e)e.classList.remove('show')}
+  function parts(v){return String(v||'0').split('.').map(function(x){return parseInt(x,10)||0})}
+  function newer(a,b){var A=parts(a),B=parts(b),n=Math.max(A.length,B.length);for(var i=0;i<n;i++){var x=A[i]||0,y=B[i]||0;if(x>y)return true;if(x<y)return false}return false}
+  function replaceDocument(html){try{sessionStorage.setItem(VC_SESSION_GUARD,'1')}catch(e){}document.open();document.write(html);document.close()}
+  function setProgress(msg){var e=byId('vcUpdateProgress');if(e)e.textContent=msg||''}
+  function setButtons(disabled){var a=byId('vcUpdateNowBtn'),b=byId('vcUpdateLaterBtn');if(a)a.disabled=!!disabled;if(b)b.disabled=!!disabled}
+  function hideModal(){var m=byId('vcUpdateModal');if(m)m.classList.add('hidden');setProgress('');setButtons(false)}
+  function showModal(info){
+    pendingUpdate=info;
+    var m=byId('vcUpdateModal'),v=byId('vcUpdateVersionText'),n=byId('vcUpdateNotes');
+    if(v)v.textContent='Current '+VC_APP_VERSION+'  →  New '+String(info.version||'');
+    if(n)n.textContent=String(info.notes||'Virendra Calculator का नया version उपलब्ध है.');
+    if(m)m.classList.remove('hidden');
   }
-  function cmp(a,b){
-    var A=parts(a),B=parts(b),n=Math.max(A.length,B.length);
-    for(var i=0;i<n;i++){
-      var x=A[i]||0,y=B[i]||0;
-      if(x>y)return 1; if(x<y)return -1;
-    }
-    return 0;
-  }
-  function writeHtml(html,ver){
-    if(!html || html.indexOf('<html')<0) return false;
+  function bootCached(){
     try{
-      sessionStorage.setItem(K_ACTIVE,String(ver||''));
-      document.open(); document.write(html); document.close();
-      return true;
-    }catch(e){ return false; }
+      if(sessionStorage.getItem(VC_SESSION_GUARD)==='1')return false;
+      var cv=localStorage.getItem(VC_CACHE_VERSION)||'',ch=localStorage.getItem(VC_CACHE_HTML)||'';
+      if(ch && newer(cv,VC_APP_VERSION)){
+        var q1="VC_APP_VERSION='"+cv+"'";
+        var q2='VC_APP_VERSION=\"'+cv+'\"';
+        if(ch.indexOf(q1)>=0 || ch.indexOf(q2)>=0){replaceDocument(ch);return true}
+        localStorage.removeItem(VC_CACHE_HTML);localStorage.removeItem(VC_CACHE_VERSION);
+      }
+    }catch(e){}
+    return false;
   }
-
-  // If a newer HTML was already downloaded, use it even when the phone is offline.
-  try{
-    var active=sessionStorage.getItem(K_ACTIVE)||'';
-    var cachedVer=localStorage.getItem(K_VER)||'';
-    var cachedHtml=localStorage.getItem(K_HTML)||'';
-    if(cachedHtml && cmp(cachedVer,VC_BUNDLED_VERSION)>0 && (!active || cmp(cachedVer,active)>0)){
-      if(writeHtml(cachedHtml,cachedVer)) return;
+  async function downloadAndApply(info){
+    if(!info)return;
+    setButtons(true);setProgress('Update download हो रहा है…');
+    try{
+      var hr=await fetch(VC_HTML_URL+'?v='+encodeURIComponent(info.version||'')+'&t='+Date.now(),{cache:'no-store'});
+      if(!hr.ok)throw new Error('HTML '+hr.status);
+      var html=await hr.text();
+      if(!html || html.length<10000 || html.indexOf('<html')<0)throw new Error('Invalid HTML');
+      try{localStorage.setItem(VC_CACHE_HTML,html);localStorage.setItem(VC_CACHE_VERSION,String(info.version||''))}catch(e){}
+      setProgress('Update complete ✓ App restart हो रही है…');
+      setTimeout(function(){replaceDocument(html)},650);
+    }catch(e){
+      console.warn('Virendra update download failed',e);setProgress('Update download नहीं हुआ. Internet check करें.');setButtons(false);
     }
+  }
+  async function checkRemote(manual){
+    if(!navigator.onLine){if(manual)toast('Internet connection नहीं है');setTimeout(unt,1800);return}
+    try{
+      if(manual)toast('Update check हो रहा है…');
+      var vr=await fetch(VC_VERSION_URL+'?t='+Date.now(),{cache:'no-store'});
+      if(!vr.ok)throw new Error('version '+vr.status);
+      var info=await vr.json();var remote=String(info.version||'0.0.0');
+      var current=VC_APP_VERSION;try{var cv=localStorage.getItem(VC_CACHE_VERSION)||'';if(newer(cv,current))current=cv}catch(e){}
+      if(!newer(remote,current)){if(manual){toast('आपके पास latest version '+current+' है ✓');setTimeout(unt,1800)}return}
+      unt();
+      try{if(!manual && sessionStorage.getItem(VC_LATER_SESSION)===remote)return}catch(e){}
+      showModal(info);
+    }catch(e){console.warn('Virendra auto update check failed',e);if(manual){toast('Update check नहीं हो पाया');setTimeout(unt,1800)}else unt()}
+  }
+  function later(){if(pendingUpdate){try{sessionStorage.setItem(VC_LATER_SESSION,String(pendingUpdate.version||''))}catch(e){}}hideModal()}
+
+  try{
+    localStorage.removeItem('virendraRemoteLatestHtmlV2');
+    localStorage.removeItem('virendraRemoteLatestVersionV2');
+    sessionStorage.removeItem('virendraUpdateBootGuardV2');
+    sessionStorage.removeItem('virendraUpdateLaterVersionV2');
   }catch(e){}
 
-  async function checkNow(){
-    try{
-      var active=''; try{active=sessionStorage.getItem(K_ACTIVE)||''}catch(e){}
-      var base=(active && cmp(active,VC_BUNDLED_VERSION)>0)?active:VC_BUNDLED_VERSION;
-      var r=await fetch(VC_VERSION_URL+'?t='+Date.now(),{cache:'no-store'});
-      if(!r.ok) return false;
-      var data=await r.json();
-      var remote=String((data&&data.version)||'').trim();
-      if(!remote || cmp(remote,base)<=0) return false;
-      var h=await fetch(VC_HTML_URL+'?t='+Date.now(),{cache:'no-store'});
-      if(!h.ok) return false;
-      var html=await h.text();
-      if(!html || html.length<5000 || html.indexOf('<html')<0) return false;
-      try{localStorage.setItem(K_HTML,html);localStorage.setItem(K_VER,remote)}catch(e){}
-      return writeHtml(html,remote);
-    }catch(e){ return false; }
-  }
-
-  window.vcCheckForUpdate=checkNow;
-  setTimeout(checkNow,700);
+  if(bootCached())return;
+  window.VirendraAppVersion=VC_APP_VERSION;
+  window.vcCheckForUpdate=function(){return checkRemote(true)};
+  window.vcApplyPendingUpdate=function(){return downloadAndApply(pendingUpdate)};
+  var now=byId('vcUpdateNowBtn'),laterBtn=byId('vcUpdateLaterBtn');if(now)now.addEventListener('click',function(){downloadAndApply(pendingUpdate)});if(laterBtn)laterBtn.addEventListener('click',later);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){checkRemote(false)},1000)});else setTimeout(function(){checkRemote(false)},1000);
 })();
 </script>
-
 </body></html>
