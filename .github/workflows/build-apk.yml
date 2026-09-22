@@ -1,0 +1,345 @@
+name: Build Virendra Calculator Release APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'index.html'
+      - 'version.json'
+      - 'icon.png'
+      - '.github/workflows/build-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Read version
+        shell: bash
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('version.json'))['version'])")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          MAJOR=${MAJOR:-0}; MINOR=${MINOR:-0}; PATCH=${PATCH:-0}
+          VERSION_CODE=$((10#$MAJOR * 10000 + 10#$MINOR * 100 + 10#$PATCH))
+          if [ "$VERSION_CODE" -lt 1 ]; then VERSION_CODE=1; fi
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+
+      - name: Check release signing setup
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          missing=0
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret missing है"
+            missing=1
+          fi
+          if [ -z "${STORE_PASSWORD:-}" ]; then
+            echo "::error::ANDROID_STORE_PASSWORD secret missing है"
+            missing=1
+          fi
+          if [ -z "${KEY_ALIAS:-}" ]; then
+            echo "::error::ANDROID_KEY_ALIAS secret missing है"
+            missing=1
+          fi
+          if [ -z "${KEY_PASSWORD:-}" ]; then
+            echo "::error::ANDROID_KEY_PASSWORD secret missing है"
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          KEYSTORE="$RUNNER_TEMP/virendra-release.jks"
+          CHECKSTORE="$RUNNER_TEMP/signing-check.p12"
+
+          if ! printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > "$KEYSTORE" 2>/dev/null; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 valid Base64 नहीं है"
+            exit 1
+          fi
+          if [ ! -s "$KEYSTORE" ]; then
+            echo "::error::Keystore file खाली बन रही है; ANDROID_KEYSTORE_BASE64 दोबारा जाँचें"
+            exit 1
+          fi
+
+          if ! keytool -list -keystore "$KEYSTORE" -storepass "$STORE_PASSWORD" >/dev/null 2>&1; then
+            echo "::error::ANDROID_STORE_PASSWORD गलत है या keystore file सही नहीं है"
+            exit 1
+          fi
+
+          if ! keytool -list -keystore "$KEYSTORE" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::ANDROID_KEY_ALIAS गलत है या यह alias keystore में नहीं है"
+            exit 1
+          fi
+
+          rm -f "$CHECKSTORE"
+          if ! keytool -importkeystore \
+            -srckeystore "$KEYSTORE" \
+            -srcstorepass "$STORE_PASSWORD" \
+            -srcalias "$KEY_ALIAS" \
+            -srckeypass "$KEY_PASSWORD" \
+            -destkeystore "$CHECKSTORE" \
+            -deststoretype PKCS12 \
+            -deststorepass 'VC-Temporary-Check-2026!' \
+            -noprompt >/dev/null 2>&1; then
+            echo "::error::ANDROID_KEY_PASSWORD गलत है, या चुना गया alias signing key नहीं है"
+            exit 1
+          fi
+          rm -f "$CHECKSTORE"
+          echo "Signing setup OK: keystore, store password, alias और key password verified."
+
+      - name: Create Android project
+        shell: bash
+        env:
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          test -n "$STORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+
+          mkdir -p android-app/app/src/main/java/com/virendra/calculator
+          mkdir -p android-app/app/src/main/assets
+          mkdir -p android-app/app/src/main/res/drawable
+          mkdir -p android-app/app/src/main/res/mipmap-anydpi-v26
+          mkdir -p android-app/app/src/main/res/values
+          mkdir -p android-app/app/src/main/res/xml
+          cp index.html android-app/app/src/main/assets/index.html
+
+          cat > android-app/settings.gradle <<'EOF'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          rootProject.name = 'VirendraCalculator'
+          include ':app'
+          EOF
+
+          cat > android-app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF
+
+          cat > android-app/app/build.gradle <<EOF
+          plugins { id 'com.android.application' }
+
+          android {
+              namespace 'com.virendra.calculator'
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId 'com.virendra.calculator'
+                  minSdk 24
+                  targetSdk 35
+                  versionCode ${VERSION_CODE}
+                  versionName '${APP_VERSION}'
+              }
+
+              signingConfigs {
+                  release {
+                      storeFile file(System.getenv("RUNNER_TEMP") + "/virendra-release.jks")
+                      storePassword System.getenv("ANDROID_STORE_PASSWORD")
+                      keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              }
+          }
+          EOF
+
+          cat > android-app/app/src/main/res/values/colors.xml <<'EOF'
+          <resources><color name="navy">#173453</color><color name="white">#FFFFFF</color></resources>
+          EOF
+
+          cat > android-app/app/src/main/res/values/themes.xml <<'EOF'
+          <resources>
+            <style name="Theme.VirendraCalculator" parent="android:style/Theme.Material.Light.NoActionBar">
+              <item name="android:fontFamily">sans</item>
+              <item name="android:colorAccent">#173453</item>
+              <item name="android:navigationBarColor">#173453</item>
+              <item name="android:statusBarColor">#173453</item>
+              <item name="android:windowLightStatusBar">false</item>
+            </style>
+          </resources>
+          EOF
+          test -f icon.png
+          cp icon.png android-app/app/src/main/res/drawable/app_icon.png
+          cat > android-app/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/navy"/><foreground android:drawable="@drawable/app_icon"/></adaptive-icon>
+          EOF
+
+          cat > android-app/app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+            <application android:allowBackup="true" android:usesCleartextTraffic="false" android:theme="@style/Theme.VirendraCalculator" android:label="Virendra Calculator" android:icon="@drawable/app_icon" android:roundIcon="@drawable/app_icon">
+              <activity android:name=".MainActivity" android:screenOrientation="unspecified" android:configChanges="orientation|screenSize|keyboardHidden" android:exported="true">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          EOF
+
+          cat > android-app/app/src/main/java/com/virendra/calculator/MainActivity.java <<'EOF'
+          package com.virendra.calculator;
+
+          import android.app.*;
+          import android.os.*;
+          import android.content.*;
+          import android.content.ContentValues;
+          import android.graphics.Color;
+          import android.net.*;
+          import android.provider.MediaStore;
+          import android.util.Base64;
+          import android.webkit.*;
+          import android.widget.Toast;
+          import java.io.OutputStream;
+
+          public class MainActivity extends Activity {
+              private WebView webView;
+              private ValueCallback<Uri[]> filePathCallback;
+              private static final int FILE_CHOOSER = 1001;
+
+              @Override public void onCreate(Bundle b) {
+                  super.onCreate(b);
+                  webView = new WebView(this);
+                  setContentView(webView);
+                  WebSettings s = webView.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setDatabaseEnabled(true);
+                  s.setAllowFileAccess(true);
+                  s.setAllowContentAccess(true);
+                  s.setMediaPlaybackRequiresUserGesture(false);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                      s.setAllowFileAccessFromFileURLs(true);
+                      s.setAllowUniversalAccessFromFileURLs(true);
+                  }
+                  webView.setBackgroundColor(Color.WHITE);
+                  webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
+                  webView.setWebViewClient(new WebViewClient() {
+                      @Override public void onPageFinished(WebView view, String url) {
+                          super.onPageFinished(view, url);
+                          injectDownloadBridge();
+                      }
+                  });
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb, FileChooserParams p) {
+                          if (filePathCallback != null) filePathCallback.onReceiveValue(null);
+                          filePathCallback = cb;
+                          try {
+                              Intent i = p.createIntent();
+                              startActivityForResult(i, FILE_CHOOSER);
+                              return true;
+                          } catch (Exception e) {
+                              filePathCallback = null;
+                              Toast.makeText(MainActivity.this, "File picker नहीं खुला", Toast.LENGTH_SHORT).show();
+                              return false;
+                          }
+                      }
+                  });
+                  webView.loadUrl("file:///android_asset/index.html");
+              }
+
+              private void injectDownloadBridge() {
+                  String js = "(function(){if(window.__vcBridge)return;window.__vcBridge=1;document.addEventListener('click',async function(e){var a=e.target&&e.target.closest?e.target.closest('a[download]'):null;if(!a||!a.href)return;if(a.href.indexOf('blob:')!==0&&a.href.indexOf('data:')!==0)return;e.preventDefault();try{var r=await fetch(a.href);var b=await r.blob();var fr=new FileReader();fr.onloadend=function(){var x=String(fr.result||'');var k=x.indexOf(',');if(k>=0)AndroidBridge.saveBase64(a.download||'download',b.type||'application/octet-stream',x.substring(k+1));};fr.readAsDataURL(b);}catch(err){console.log(err);}},true);})();";
+                  webView.evaluateJavascript(js, null);
+              }
+
+              @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode == FILE_CHOOSER && filePathCallback != null) {
+                      Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+                      filePathCallback.onReceiveValue(results);
+                      filePathCallback = null;
+                  }
+              }
+
+              @Override public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) webView.goBack(); else super.onBackPressed();
+              }
+
+              public class Bridge {
+                  @JavascriptInterface public void saveBase64(String fileName, String mime, String base64) {
+                      runOnUiThread(() -> {
+                          try {
+                              byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                              ContentValues values = new ContentValues();
+                              values.put(MediaStore.Downloads.DISPLAY_NAME, fileName == null || fileName.isEmpty() ? "Virendra_Download" : fileName);
+                              values.put(MediaStore.Downloads.MIME_TYPE, mime == null || mime.isEmpty() ? "application/octet-stream" : mime);
+                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) values.put(MediaStore.Downloads.RELATIVE_PATH, "Download/Virendra Calculator");
+                              Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                              if (uri == null) throw new Exception("save uri");
+                              try (OutputStream os = getContentResolver().openOutputStream(uri)) { os.write(bytes); }
+                              Toast.makeText(MainActivity.this, "Downloaded: " + fileName, Toast.LENGTH_SHORT).show();
+                          } catch (Exception e) {
+                              Toast.makeText(MainActivity.this, "Download save नहीं हुआ", Toast.LENGTH_SHORT).show();
+                          }
+                      });
+                  }
+              }
+          }
+          EOF
+
+      - name: Build signed release APK
+        working-directory: android-app
+        env:
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle --no-daemon assembleRelease
+
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          APK="android-app/app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+
+      - name: Name APK with app version
+        shell: bash
+        run: |
+          cp android-app/app/build/outputs/apk/release/app-release.apk "Virendra-Calculator-v${APP_VERSION}-release.apk"
+          echo "APK_NAME=Virendra-Calculator-v${APP_VERSION}-release.apk" >> "$GITHUB_ENV"
+
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Virendra-Calculator-Release-APK
+          path: ${{ env.APK_NAME }}
+          if-no-files-found: error
+          retention-days: 90
