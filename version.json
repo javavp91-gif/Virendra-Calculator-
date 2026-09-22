@@ -1,5 +1,4 @@
 {
-  "version": "1.1.10",
-  "updated": "2026-09-21",
-  "notes": "Scanner camera capture fix. Install the newly built APK to enable native camera support."
+  "version": "1.1.14",
+  "notes": "Fixed the JavaScript crash that stopped some calculators from updating results instantly. Live result refresh now continues across calculators. Camera button and hidden Developer HTML access retained."
 }
