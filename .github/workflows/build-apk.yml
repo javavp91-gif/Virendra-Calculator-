@@ -8,6 +8,7 @@ on:
       - 'index.html'
       - 'version.json'
       - 'icon.png'
+      - 'splash.png'
       - '.github/workflows/build-apk.yml'
 
 permissions:
@@ -16,6 +17,7 @@ permissions:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,13 +38,15 @@ jobs:
         run: |
           VERSION=$(python3 -c "import json; print(json.load(open('version.json'))['version'])")
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-          MAJOR=${MAJOR:-0}; MINOR=${MINOR:-0}; PATCH=${PATCH:-0}
+          MAJOR=${MAJOR:-0}
+          MINOR=${MINOR:-0}
+          PATCH=${PATCH:-0}
           VERSION_CODE=$((10#$MAJOR * 10000 + 10#$MINOR * 100 + 10#$PATCH))
           if [ "$VERSION_CODE" -lt 1 ]; then VERSION_CODE=1; fi
           echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
 
-      - name: Check release signing setup
+      - name: Prepare compatible signing key
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -52,88 +56,81 @@ jobs:
         run: |
           set -euo pipefail
 
-          missing=0
-          if [ -z "${KEYSTORE_BASE64:-}" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 secret missing है"
-            missing=1
-          fi
-          if [ -z "${STORE_PASSWORD:-}" ]; then
-            echo "::error::ANDROID_STORE_PASSWORD secret missing है"
-            missing=1
-          fi
-          if [ -z "${KEY_ALIAS:-}" ]; then
-            echo "::error::ANDROID_KEY_ALIAS secret missing है"
-            missing=1
-          fi
-          if [ -z "${KEY_PASSWORD:-}" ]; then
-            echo "::error::ANDROID_KEY_PASSWORD secret missing है"
-            missing=1
-          fi
-          if [ "$missing" -ne 0 ]; then
-            exit 1
-          fi
+          test -n "${KEYSTORE_BASE64:-}"
+          test -n "${STORE_PASSWORD:-}"
+          test -n "${KEY_ALIAS:-}"
+          test -n "${KEY_PASSWORD:-}"
 
-          KEYSTORE="$RUNNER_TEMP/virendra-release.jks"
-          CHECKSTORE="$RUNNER_TEMP/signing-check.p12"
+          OLD_KEYSTORE="$RUNNER_TEMP/virendra-release-original.jks"
+          NEW_KEYSTORE="$RUNNER_TEMP/virendra-release-compatible.p12"
 
-          if ! printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > "$KEYSTORE" 2>/dev/null; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 valid Base64 नहीं है"
-            exit 1
-          fi
-          if [ ! -s "$KEYSTORE" ]; then
-            echo "::error::Keystore file खाली बन रही है; ANDROID_KEYSTORE_BASE64 दोबारा जाँचें"
-            exit 1
-          fi
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > "$OLD_KEYSTORE"
+          test -s "$OLD_KEYSTORE"
 
-          if ! keytool -list -keystore "$KEYSTORE" -storepass "$STORE_PASSWORD" >/dev/null 2>&1; then
-            echo "::error::ANDROID_STORE_PASSWORD गलत है या keystore file सही नहीं है"
-            exit 1
-          fi
+          keytool -list \
+            -keystore "$OLD_KEYSTORE" \
+            -storepass "$STORE_PASSWORD" >/dev/null
 
-          if ! keytool -list -keystore "$KEYSTORE" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
-            echo "::error::ANDROID_KEY_ALIAS गलत है या यह alias keystore में नहीं है"
-            exit 1
-          fi
+          keytool -list \
+            -keystore "$OLD_KEYSTORE" \
+            -storepass "$STORE_PASSWORD" \
+            -alias "$KEY_ALIAS" >/dev/null
 
-          rm -f "$CHECKSTORE"
-          if ! keytool -importkeystore \
-            -srckeystore "$KEYSTORE" \
+          ASCII_PASSWORD=$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')
+          echo "::add-mask::$ASCII_PASSWORD"
+
+          rm -f "$NEW_KEYSTORE"
+
+          keytool -importkeystore \
+            -srckeystore "$OLD_KEYSTORE" \
             -srcstorepass "$STORE_PASSWORD" \
             -srcalias "$KEY_ALIAS" \
             -srckeypass "$KEY_PASSWORD" \
-            -destkeystore "$CHECKSTORE" \
+            -destkeystore "$NEW_KEYSTORE" \
             -deststoretype PKCS12 \
-            -deststorepass 'VC-Temporary-Check-2026!' \
-            -noprompt >/dev/null 2>&1; then
-            echo "::error::ANDROID_KEY_PASSWORD गलत है, या चुना गया alias signing key नहीं है"
-            exit 1
-          fi
-          rm -f "$CHECKSTORE"
-          echo "Signing setup OK: keystore, store password, alias और key password verified."
+            -deststorepass "$ASCII_PASSWORD" \
+            -destkeypass "$ASCII_PASSWORD" \
+            -destalias "$KEY_ALIAS" \
+            -noprompt
+
+          test -s "$NEW_KEYSTORE"
+
+          echo "SIGNING_STORE_FILE=$NEW_KEYSTORE" >> "$GITHUB_ENV"
+          echo "SIGNING_STORE_PASSWORD=$ASCII_PASSWORD" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "SIGNING_KEY_PASSWORD=$ASCII_PASSWORD" >> "$GITHUB_ENV"
 
       - name: Create Android project
         shell: bash
-        env:
-          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          set -e
-          test -n "$STORE_PASSWORD"
-          test -n "$KEY_ALIAS"
-          test -n "$KEY_PASSWORD"
+          set -euo pipefail
 
           mkdir -p android-app/app/src/main/java/com/virendra/calculator
           mkdir -p android-app/app/src/main/assets
           mkdir -p android-app/app/src/main/res/drawable
+          mkdir -p android-app/app/src/main/res/mipmap
           mkdir -p android-app/app/src/main/res/mipmap-anydpi-v26
           mkdir -p android-app/app/src/main/res/values
-          mkdir -p android-app/app/src/main/res/xml
+
           cp index.html android-app/app/src/main/assets/index.html
 
           cat > android-app/settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
           rootProject.name = 'VirendraCalculator'
           include ':app'
           EOF
@@ -145,7 +142,9 @@ jobs:
           EOF
 
           cat > android-app/app/build.gradle <<EOF
-          plugins { id 'com.android.application' }
+          plugins {
+              id 'com.android.application'
+          }
 
           android {
               namespace 'com.virendra.calculator'
@@ -161,10 +160,11 @@ jobs:
 
               signingConfigs {
                   release {
-                      storeFile file(System.getenv("RUNNER_TEMP") + "/virendra-release.jks")
-                      storePassword System.getenv("ANDROID_STORE_PASSWORD")
-                      keyAlias System.getenv("ANDROID_KEY_ALIAS")
-                      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                      storeFile file(System.getenv("SIGNING_STORE_FILE"))
+                      storePassword System.getenv("SIGNING_STORE_PASSWORD")
+                      keyAlias System.getenv("SIGNING_KEY_ALIAS")
+                      keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+                      storeType "PKCS12"
                   }
               }
 
@@ -179,148 +179,827 @@ jobs:
           EOF
 
           cat > android-app/app/src/main/res/values/colors.xml <<'EOF'
-          <resources><color name="navy">#173453</color><color name="white">#FFFFFF</color></resources>
+          <resources>
+              <color name="navy">#173453</color>
+              <color name="white">#FFFFFF</color>
+          </resources>
           EOF
 
           cat > android-app/app/src/main/res/values/themes.xml <<'EOF'
           <resources>
-            <style name="Theme.VirendraCalculator" parent="android:style/Theme.Material.Light.NoActionBar">
-              <item name="android:fontFamily">sans</item>
-              <item name="android:colorAccent">#173453</item>
-              <item name="android:navigationBarColor">#173453</item>
-              <item name="android:statusBarColor">#173453</item>
-              <item name="android:windowLightStatusBar">false</item>
-            </style>
+              <style name="Theme.VirendraCalculator" parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:colorAccent">#173453</item>
+                  <item name="android:navigationBarColor">#173453</item>
+                  <item name="android:statusBarColor">#173453</item>
+                  <item name="android:windowLightStatusBar">false</item>
+                  <item name="android:windowActionModeOverlay">true</item>
+              </style>
           </resources>
           EOF
-          test -f icon.png
-          cp icon.png android-app/app/src/main/res/drawable/app_icon.png
+
+          # Crop outer white margin when ImageMagick is available.
+          if command -v magick >/dev/null 2>&1; then
+            magick icon.png -fuzz 5% -trim +repage -resize '1080x1080^' -gravity center -extent 1080x1080 android-app/app/src/main/res/drawable/app_icon.png
+          elif command -v convert >/dev/null 2>&1; then
+            convert icon.png -fuzz 5% -trim +repage -resize '1080x1080^' -gravity center -extent 1080x1080 android-app/app/src/main/res/drawable/app_icon.png
+          else
+            cp icon.png android-app/app/src/main/res/drawable/app_icon.png
+          fi
+
+          cp android-app/app/src/main/res/drawable/app_icon.png \
+             android-app/app/src/main/res/mipmap/ic_launcher.png
+
+          if [ -f splash.png ]; then
+            cp splash.png android-app/app/src/main/res/drawable/splash_image.png
+          else
+            cp android-app/app/src/main/res/drawable/app_icon.png android-app/app/src/main/res/drawable/splash_image.png
+          fi
+
           cat > android-app/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/navy"/><foreground android:drawable="@drawable/app_icon"/></adaptive-icon>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/navy"/>
+              <foreground android:drawable="@drawable/app_icon"/>
+          </adaptive-icon>
           EOF
 
           cat > android-app/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <uses-permission android:name="android.permission.INTERNET"/>
-            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-            <application android:allowBackup="true" android:usesCleartextTraffic="false" android:theme="@style/Theme.VirendraCalculator" android:label="Virendra Calculator" android:icon="@drawable/app_icon" android:roundIcon="@drawable/app_icon">
-              <activity android:name=".MainActivity" android:screenOrientation="unspecified" android:configChanges="orientation|screenSize|keyboardHidden" android:exported="true">
-                <intent-filter>
-                  <action android:name="android.intent.action.MAIN"/>
-                  <category android:name="android.intent.category.LAUNCHER"/>
-                </intent-filter>
-              </activity>
-            </application>
+
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+              <uses-permission android:name="android.permission.CAMERA"/>
+              <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
+              <application
+                  android:allowBackup="true"
+                  android:usesCleartextTraffic="false"
+                  android:theme="@style/Theme.VirendraCalculator"
+                  android:label="Virendra Calculator"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:screenOrientation="unspecified"
+                      android:configChanges="orientation|screenSize|keyboardHidden"
+                      android:exported="true">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+
+                  </activity>
+
+              </application>
           </manifest>
           EOF
 
           cat > android-app/app/src/main/java/com/virendra/calculator/MainActivity.java <<'EOF'
           package com.virendra.calculator;
 
-          import android.app.*;
-          import android.os.*;
-          import android.content.*;
+          import android.Manifest;
+          import android.app.Activity;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.os.Handler;
+          import android.os.Looper;
           import android.content.ContentValues;
+          import android.content.Intent;
+          import android.content.SharedPreferences;
+          import android.content.pm.PackageManager;
           import android.graphics.Color;
-          import android.net.*;
+          import android.graphics.Typeface;
+          import android.net.Uri;
           import android.provider.MediaStore;
           import android.util.Base64;
-          import android.webkit.*;
+          import android.util.TypedValue;
+          import android.view.Gravity;
+          import android.view.ViewGroup;
+          import android.widget.ImageView;
+          import android.widget.LinearLayout;
+          import android.widget.TextView;
           import android.widget.Toast;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.PermissionRequest;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          import org.json.JSONObject;
+
+          import java.io.BufferedInputStream;
+          import java.io.BufferedReader;
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.InputStream;
+          import java.io.InputStreamReader;
           import java.io.OutputStream;
+          import java.net.HttpURLConnection;
+          import java.net.URL;
+          import java.nio.charset.StandardCharsets;
+          import java.util.ArrayList;
+          import java.util.regex.Matcher;
+          import java.util.regex.Pattern;
 
           public class MainActivity extends Activity {
+
+              private static final int FILE_CHOOSER = 1001;
+              private static final int CAMERA_PERMISSION = 1002;
+              private static final long SPLASH_MS = 2000L;
+
+              private static final String REMOTE_VERSION_URL =
+                      "https://raw.githubusercontent.com/javavp91-gif/Virendra-Calculator/main/version.json";
+
+              private static final String REMOTE_HTML_URL =
+                      "https://raw.githubusercontent.com/javavp91-gif/Virendra-Calculator/main/index.html";
+
               private WebView webView;
               private ValueCallback<Uri[]> filePathCallback;
-              private static final int FILE_CHOOSER = 1001;
+              private Uri cameraImageUri;
 
-              @Override public void onCreate(Bundle b) {
-                  super.onCreate(b);
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  showNativeSplash();
+
+                  new Handler(Looper.getMainLooper()).postDelayed(
+                          this::showWebApp,
+                          SPLASH_MS
+                  );
+              }
+
+              private int dp(int value) {
+                  return (int) TypedValue.applyDimension(
+                          TypedValue.COMPLEX_UNIT_DIP,
+                          value,
+                          getResources().getDisplayMetrics()
+                  );
+              }
+
+              private void showNativeSplash() {
+                  getWindow().setStatusBarColor(Color.BLACK);
+                  getWindow().setNavigationBarColor(Color.BLACK);
+
+                  android.widget.FrameLayout root = new android.widget.FrameLayout(this);
+                  root.setBackgroundColor(Color.BLACK);
+
+                  ImageView splash = new ImageView(this);
+                  splash.setImageResource(R.drawable.splash_image);
+                  splash.setScaleType(ImageView.ScaleType.CENTER_CROP);
+
+                  root.addView(
+                          splash,
+                          new android.widget.FrameLayout.LayoutParams(
+                                  ViewGroup.LayoutParams.MATCH_PARENT,
+                                  ViewGroup.LayoutParams.MATCH_PARENT
+                          )
+                  );
+
+                  setContentView(root);
+              }
+
+              private void showWebApp() {
+                  if (isFinishing() || isDestroyed()) return;
+
                   webView = new WebView(this);
                   setContentView(webView);
-                  WebSettings s = webView.getSettings();
-                  s.setJavaScriptEnabled(true);
-                  s.setDomStorageEnabled(true);
-                  s.setDatabaseEnabled(true);
-                  s.setAllowFileAccess(true);
-                  s.setAllowContentAccess(true);
-                  s.setMediaPlaybackRequiresUserGesture(false);
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                      s.setAllowFileAccessFromFileURLs(true);
-                      s.setAllowUniversalAccessFromFileURLs(true);
-                  }
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setAllowFileAccess(true);
+                  settings.setAllowContentAccess(true);
+                  settings.setAllowFileAccessFromFileURLs(true);
+                  settings.setAllowUniversalAccessFromFileURLs(true);
+
                   webView.setBackgroundColor(Color.WHITE);
-                  webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
+
                   webView.setWebViewClient(new WebViewClient() {
-                      @Override public void onPageFinished(WebView view, String url) {
+                      @Override
+                      public void onPageFinished(WebView view, String url) {
                           super.onPageFinished(view, url);
-                          injectDownloadBridge();
+
+                          // Native splash already ran for 3 seconds.
+                          // Remove the HTML splash so it cannot run a second time.
+                          view.evaluateJavascript(
+                                  "(function(){var s=document.getElementById('vcAppSplash');" +
+                                  "if(s&&s.parentNode){s.parentNode.removeChild(s);}})();",
+                                  null
+                          );
                       }
                   });
+
+                  webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
+
                   webView.setWebChromeClient(new WebChromeClient() {
-                      @Override public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb, FileChooserParams p) {
-                          if (filePathCallback != null) filePathCallback.onReceiveValue(null);
-                          filePathCallback = cb;
+
+                      @Override
+                      public void onPermissionRequest(final PermissionRequest request) {
+                          runOnUiThread(() -> {
+                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                                      checkSelfPermission(Manifest.permission.CAMERA)
+                                              != PackageManager.PERMISSION_GRANTED) {
+
+                                  requestPermissions(
+                                          new String[]{Manifest.permission.CAMERA},
+                                          CAMERA_PERMISSION
+                                  );
+                                  request.deny();
+                                  return;
+                              }
+
+                              for (String resource : request.getResources()) {
+                                  if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
+                                      request.grant(new String[]{
+                                              PermissionRequest.RESOURCE_VIDEO_CAPTURE
+                                      });
+                                      return;
+                                  }
+                              }
+
+                              request.deny();
+                          });
+                      }
+
+                      @Override
+                      public boolean onShowFileChooser(
+                              WebView view,
+                              ValueCallback<Uri[]> callback,
+                              FileChooserParams params) {
+
+                          if (filePathCallback != null) {
+                              filePathCallback.onReceiveValue(null);
+                          }
+
+                          filePathCallback = callback;
+
                           try {
-                              Intent i = p.createIntent();
-                              startActivityForResult(i, FILE_CHOOSER);
+                              if (params.isCaptureEnabled()) {
+
+                                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                                          checkSelfPermission(Manifest.permission.CAMERA)
+                                                  != PackageManager.PERMISSION_GRANTED) {
+
+                                      requestPermissions(
+                                              new String[]{Manifest.permission.CAMERA},
+                                              CAMERA_PERMISSION
+                                      );
+
+                                      Toast.makeText(
+                                              MainActivity.this,
+                                              "Camera permission Allow करें, फिर Camera दोबारा दबाएँ",
+                                              Toast.LENGTH_SHORT
+                                      ).show();
+
+                                      filePathCallback.onReceiveValue(null);
+                                      filePathCallback = null;
+                                      return true;
+                                  }
+
+                                  Intent cameraIntent = createCameraIntent();
+                                  startActivityForResult(cameraIntent, FILE_CHOOSER);
+                                  return true;
+                              }
+
+                              Intent pickerIntent = params.createIntent();
+
+                              if (params.getMode() ==
+                                      WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) {
+                                  pickerIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                              }
+
+                              startActivityForResult(pickerIntent, FILE_CHOOSER);
                               return true;
+
                           } catch (Exception e) {
-                              filePathCallback = null;
-                              Toast.makeText(MainActivity.this, "File picker नहीं खुला", Toast.LENGTH_SHORT).show();
-                              return false;
+                              if (filePathCallback != null) {
+                                  filePathCallback.onReceiveValue(null);
+                                  filePathCallback = null;
+                              }
+
+                              Toast.makeText(
+                                      MainActivity.this,
+                                      "Camera/Gallery open नहीं हुई",
+                                      Toast.LENGTH_SHORT
+                              ).show();
+
+                              return true;
                           }
                       }
                   });
-                  webView.loadUrl("file:///android_asset/index.html");
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                          checkSelfPermission(Manifest.permission.CAMERA)
+                                  != PackageManager.PERMISSION_GRANTED) {
+
+                      requestPermissions(
+                              new String[]{Manifest.permission.CAMERA},
+                              CAMERA_PERMISSION
+                      );
+                  }
+
+                  loadBestAvailableHtml();
+                  new Thread(this::checkForRemoteHtmlUpdate).start();
               }
 
-              private void injectDownloadBridge() {
-                  String js = "(function(){if(window.__vcBridge)return;window.__vcBridge=1;document.addEventListener('click',async function(e){var a=e.target&&e.target.closest?e.target.closest('a[download]'):null;if(!a||!a.href)return;if(a.href.indexOf('blob:')!==0&&a.href.indexOf('data:')!==0)return;e.preventDefault();try{var r=await fetch(a.href);var b=await r.blob();var fr=new FileReader();fr.onloadend=function(){var x=String(fr.result||'');var k=x.indexOf(',');if(k>=0)AndroidBridge.saveBase64(a.download||'download',b.type||'application/octet-stream',x.substring(k+1));};fr.readAsDataURL(b);}catch(err){console.log(err);}},true);})();";
-                  webView.evaluateJavascript(js, null);
+              private Intent createCameraIntent() throws Exception {
+
+                  ContentValues values = new ContentValues();
+                  values.put(
+                          MediaStore.Images.Media.DISPLAY_NAME,
+                          "Virendra_Scan_" + System.currentTimeMillis() + ".jpg"
+                  );
+                  values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                      values.put(
+                              MediaStore.Images.Media.RELATIVE_PATH,
+                              "Pictures/Virendra Calculator"
+                      );
+                  }
+
+                  cameraImageUri = getContentResolver().insert(
+                          MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                          values
+                  );
+
+                  if (cameraImageUri == null) {
+                      throw new Exception("Camera image URI not created");
+                  }
+
+                  Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                  intent.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri);
+                  intent.addFlags(
+                          Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                          Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                  );
+
+                  return intent;
               }
 
-              @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+              @Override
+              protected void onActivityResult(
+                      int requestCode,
+                      int resultCode,
+                      Intent data) {
+
                   super.onActivityResult(requestCode, resultCode, data);
-                  if (requestCode == FILE_CHOOSER && filePathCallback != null) {
-                      Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
-                      filePathCallback.onReceiveValue(results);
-                      filePathCallback = null;
+
+                  if (requestCode != FILE_CHOOSER || filePathCallback == null) {
+                      return;
+                  }
+
+                  Uri[] results = null;
+
+                  if (resultCode == RESULT_OK) {
+
+                      if (cameraImageUri != null &&
+                              (data == null ||
+                               (data.getData() == null && data.getClipData() == null))) {
+
+                          results = new Uri[]{cameraImageUri};
+
+                      } else if (data != null && data.getClipData() != null) {
+
+                          int count = data.getClipData().getItemCount();
+                          ArrayList<Uri> uris = new ArrayList<>();
+
+                          for (int i = 0; i < count; i++) {
+                              Uri uri = data.getClipData().getItemAt(i).getUri();
+                              if (uri != null) uris.add(uri);
+                          }
+
+                          results = uris.toArray(new Uri[0]);
+
+                      } else if (data != null && data.getData() != null) {
+
+                          results = new Uri[]{data.getData()};
+                      }
+
+                  } else if (cameraImageUri != null) {
+
+                      try {
+                          getContentResolver().delete(cameraImageUri, null, null);
+                      } catch (Exception ignored) {
+                      }
+                  }
+
+                  filePathCallback.onReceiveValue(results);
+                  filePathCallback = null;
+                  cameraImageUri = null;
+              }
+
+              private void loadBestAvailableHtml() {
+
+                  SharedPreferences prefs =
+                          getSharedPreferences("virendra_native_update", MODE_PRIVATE);
+
+                  String cachedVersion =
+                          prefs.getString("cached_version", "0.0.0");
+
+                  String apkVersion = getInstalledVersion();
+
+                  File cachedHtml =
+                          new File(getFilesDir(), "virendra_latest.html");
+
+                  if (cachedHtml.exists() &&
+                          compareVersions(cachedVersion, apkVersion) > 0) {
+
+                      webView.loadUrl(
+                              Uri.fromFile(cachedHtml).toString()
+                      );
+
+                  } else {
+
+                      webView.loadUrl(
+                              "file:///android_asset/index.html"
+                      );
                   }
               }
 
-              @Override public void onBackPressed() {
-                  if (webView != null && webView.canGoBack()) webView.goBack(); else super.onBackPressed();
+              private void checkForRemoteHtmlUpdate() {
+
+                  HttpURLConnection versionConnection = null;
+                  HttpURLConnection htmlConnection = null;
+
+                  try {
+                      versionConnection =
+                              (HttpURLConnection)
+                                      new URL(REMOTE_VERSION_URL +
+                                              "?t=" + System.currentTimeMillis())
+                                              .openConnection();
+
+                      versionConnection.setConnectTimeout(7000);
+                      versionConnection.setReadTimeout(7000);
+                      versionConnection.setUseCaches(false);
+
+                      if (versionConnection.getResponseCode() != 200) return;
+
+                      String versionJson =
+                              readText(versionConnection.getInputStream());
+
+                      JSONObject json = new JSONObject(versionJson);
+                      String remoteVersion =
+                              json.optString("version", "0.0.0");
+
+                      SharedPreferences prefs =
+                              getSharedPreferences(
+                                      "virendra_native_update",
+                                      MODE_PRIVATE
+                              );
+
+                      String cachedVersion =
+                              prefs.getString(
+                                      "cached_version",
+                                      "0.0.0"
+                              );
+
+                      String currentVersion = getInstalledVersion();
+
+                      if (compareVersions(
+                              cachedVersion,
+                              currentVersion
+                      ) > 0) {
+                          currentVersion = cachedVersion;
+                      }
+
+                      if (compareVersions(
+                              remoteVersion,
+                              currentVersion
+                      ) <= 0) {
+                          return;
+                      }
+
+                      htmlConnection =
+                              (HttpURLConnection)
+                                      new URL(REMOTE_HTML_URL +
+                                              "?v=" + remoteVersion +
+                                              "&t=" + System.currentTimeMillis())
+                                              .openConnection();
+
+                      htmlConnection.setConnectTimeout(10000);
+                      htmlConnection.setReadTimeout(15000);
+                      htmlConnection.setUseCaches(false);
+
+                      if (htmlConnection.getResponseCode() != 200) return;
+
+                      String html =
+                              readText(htmlConnection.getInputStream());
+
+                      if (html.length() < 10000 ||
+                              !html.toLowerCase().contains("<html")) {
+                          return;
+                      }
+
+                      Pattern p = Pattern.compile(
+                              "var\\s+VC_APP_VERSION\\s*=\\s*['\"][^'\"]*['\"]\\s*;"
+                      );
+
+                      Matcher m = p.matcher(html);
+
+                      if (m.find()) {
+                          html = m.replaceFirst(
+                                  Matcher.quoteReplacement(
+                                          "var VC_APP_VERSION='" +
+                                          remoteVersion +
+                                          "';"
+                                  )
+                          );
+                      }
+
+                      File target =
+                              new File(
+                                      getFilesDir(),
+                                      "virendra_latest.html"
+                              );
+
+                      File temp =
+                              new File(
+                                      getFilesDir(),
+                                      "virendra_latest.tmp"
+                              );
+
+                      try (FileOutputStream fos =
+                                   new FileOutputStream(temp)) {
+
+                          fos.write(
+                                  html.getBytes(
+                                          StandardCharsets.UTF_8
+                                  )
+                          );
+
+                          fos.flush();
+                      }
+
+                      if (target.exists()) {
+                          target.delete();
+                      }
+
+                      if (!temp.renameTo(target)) {
+                          return;
+                      }
+
+                      prefs.edit()
+                              .putString(
+                                      "cached_version",
+                                      remoteVersion
+                              )
+                              .apply();
+
+                      runOnUiThread(() -> {
+                          Toast.makeText(
+                                  MainActivity.this,
+                                  "App data auto-updated to " +
+                                  remoteVersion,
+                                  Toast.LENGTH_SHORT
+                          ).show();
+
+                          if (webView != null) {
+                              webView.loadUrl(
+                                      Uri.fromFile(target).toString()
+                              );
+                          }
+                      });
+
+                  } catch (Exception ignored) {
+
+                  } finally {
+
+                      if (versionConnection != null) {
+                          versionConnection.disconnect();
+                      }
+
+                      if (htmlConnection != null) {
+                          htmlConnection.disconnect();
+                      }
+                  }
+              }
+
+              private String getInstalledVersion() {
+
+                  try {
+                      return getPackageManager()
+                              .getPackageInfo(
+                                      getPackageName(),
+                                      0
+                              )
+                              .versionName;
+
+                  } catch (Exception e) {
+                      return "0.0.0";
+                  }
+              }
+
+              private int compareVersions(
+                      String first,
+                      String second) {
+
+                  String[] a =
+                          String.valueOf(first).split("\\.");
+
+                  String[] b =
+                          String.valueOf(second).split("\\.");
+
+                  int n = Math.max(a.length, b.length);
+
+                  for (int i = 0; i < n; i++) {
+
+                      int av = 0;
+                      int bv = 0;
+
+                      try {
+                          if (i < a.length) {
+                              av = Integer.parseInt(
+                                      a[i].replaceAll(
+                                              "[^0-9]",
+                                              ""
+                                      )
+                              );
+                          }
+                      } catch (Exception ignored) {
+                      }
+
+                      try {
+                          if (i < b.length) {
+                              bv = Integer.parseInt(
+                                      b[i].replaceAll(
+                                              "[^0-9]",
+                                              ""
+                                      )
+                              );
+                          }
+                      } catch (Exception ignored) {
+                      }
+
+                      if (av != bv) {
+                          return Integer.compare(av, bv);
+                      }
+                  }
+
+                  return 0;
+              }
+
+              private String readText(
+                      InputStream inputStream) throws Exception {
+
+                  StringBuilder result =
+                          new StringBuilder();
+
+                  try (BufferedReader reader =
+                               new BufferedReader(
+                                       new InputStreamReader(
+                                               new BufferedInputStream(
+                                                       inputStream
+                                               ),
+                                               StandardCharsets.UTF_8
+                                       )
+                               )) {
+
+                      String line;
+
+                      while ((line = reader.readLine()) != null) {
+                          result.append(line).append('\n');
+                      }
+                  }
+
+                  return result.toString();
               }
 
               public class Bridge {
-                  @JavascriptInterface public void saveBase64(String fileName, String mime, String base64) {
+
+                  @JavascriptInterface
+                  public void saveBase64(
+                          String fileName,
+                          String mime,
+                          String base64) {
+
                       runOnUiThread(() -> {
+
                           try {
-                              byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
-                              ContentValues values = new ContentValues();
-                              values.put(MediaStore.Downloads.DISPLAY_NAME, fileName == null || fileName.isEmpty() ? "Virendra_Download" : fileName);
-                              values.put(MediaStore.Downloads.MIME_TYPE, mime == null || mime.isEmpty() ? "application/octet-stream" : mime);
-                              if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) values.put(MediaStore.Downloads.RELATIVE_PATH, "Download/Virendra Calculator");
-                              Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-                              if (uri == null) throw new Exception("save uri");
-                              try (OutputStream os = getContentResolver().openOutputStream(uri)) { os.write(bytes); }
-                              Toast.makeText(MainActivity.this, "Downloaded: " + fileName, Toast.LENGTH_SHORT).show();
+                              byte[] bytes =
+                                      Base64.decode(
+                                              base64,
+                                              Base64.DEFAULT
+                                      );
+
+                              ContentValues values =
+                                      new ContentValues();
+
+                              values.put(
+                                      MediaStore.Downloads.DISPLAY_NAME,
+                                      fileName
+                              );
+
+                              values.put(
+                                      MediaStore.Downloads.MIME_TYPE,
+                                      mime
+                              );
+
+                              if (Build.VERSION.SDK_INT >=
+                                      Build.VERSION_CODES.Q) {
+
+                                  values.put(
+                                          MediaStore.Downloads.RELATIVE_PATH,
+                                          "Download/Virendra Calculator"
+                                  );
+                              }
+
+                              Uri uri =
+                                      getContentResolver().insert(
+                                              MediaStore.Downloads
+                                                      .EXTERNAL_CONTENT_URI,
+                                              values
+                                      );
+
+                              if (uri == null) {
+                                  throw new Exception(
+                                          "Download URI not created"
+                                  );
+                              }
+
+                              try (OutputStream os =
+                                           getContentResolver()
+                                                   .openOutputStream(uri)) {
+
+                                  if (os == null) {
+                                      throw new Exception(
+                                              "Output stream unavailable"
+                                      );
+                                  }
+
+                                  os.write(bytes);
+                              }
+
+                              Toast.makeText(
+                                      MainActivity.this,
+                                      "Downloaded: " + fileName,
+                                      Toast.LENGTH_SHORT
+                              ).show();
+
                           } catch (Exception e) {
-                              Toast.makeText(MainActivity.this, "Download save नहीं हुआ", Toast.LENGTH_SHORT).show();
+
+                              Toast.makeText(
+                                      MainActivity.this,
+                                      "Download save नहीं हुआ",
+                                      Toast.LENGTH_SHORT
+                              ).show();
                           }
                       });
                   }
+              }
+
+              @Override
+              public void onBackPressed() {
+
+                  if (webView == null) {
+                      MainActivity.super.onBackPressed();
+                      return;
+                  }
+
+                  webView.evaluateJavascript(
+                          "(function(){" +
+                          "try{" +
+                          "if(document.body.classList.contains('tool-open')" +
+                          "&& typeof navBack==='function'){" +
+                          "navBack();return 'handled';}" +
+                          "}catch(e){}" +
+                          "return 'exit';" +
+                          "})()",
+                          value -> {
+
+                              if (value != null &&
+                                      value.contains("handled")) {
+                                  return;
+                              }
+
+                              if (webView.canGoBack()) {
+                                  webView.goBack();
+                              } else {
+                                  MainActivity.super.onBackPressed();
+                              }
+                          }
+                  );
+              }
+
+              @Override
+              protected void onDestroy() {
+                  if (webView != null) {
+                      webView.destroy();
+                      webView = null;
+                  }
+                  super.onDestroy();
               }
           }
           EOF
 
       - name: Build signed release APK
         working-directory: android-app
-        env:
-          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle --no-daemon assembleRelease
 
       - name: Verify APK signature
@@ -328,15 +1007,21 @@ jobs:
         run: |
           APK="android-app/app/build/outputs/apk/release/app-release.apk"
           test -f "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" \
+            verify \
+            --verbose \
+            --print-certs \
+            "$APK"
 
-      - name: Name APK with app version
+      - name: Name APK
         shell: bash
         run: |
-          cp android-app/app/build/outputs/apk/release/app-release.apk "Virendra-Calculator-v${APP_VERSION}-release.apk"
+          cp \
+            android-app/app/build/outputs/apk/release/app-release.apk \
+            "Virendra-Calculator-v${APP_VERSION}-release.apk"
           echo "APK_NAME=Virendra-Calculator-v${APP_VERSION}-release.apk" >> "$GITHUB_ENV"
 
-      - name: Upload signed release APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Virendra-Calculator-Release-APK
