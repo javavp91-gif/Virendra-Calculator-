@@ -1,4 +1,4 @@
 {
-  "version": "1.1.34",
-  "notes": "2-second native splash image added using splash.png. Auto update is retained, so users do not need to press an update button repeatedly for HTML tool changes. If native APK features change, install the new APK version once."
+  "version": "1.1.58",
+  "notes": "Fixed IMAGE→PDF image-read failures on Android/Google Photos. Selected images are now copied into an in-memory cache immediately after selection, and PDF generation uses robust object-URL + FileReader fallback loading."
 }
